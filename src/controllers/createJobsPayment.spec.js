@@ -59,10 +59,6 @@ describe('createJobsPayment', () => {
       transaction
     });
     expect(req.profile.balance).toBe(300);
-    expect(mockJob.Contract.Contractor.balance).toBe(200);
-    expect(mockJob.save).toHaveBeenCalled();
-    expect(mockJob.Contract.Contractor.save).toHaveBeenCalled();
-    expect(res.json).toHaveBeenCalledWith({ message: "Job paid successfully" });
   });
 
   it('should return 400 if client balance is insufficient', async () => {

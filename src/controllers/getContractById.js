@@ -4,7 +4,6 @@ const getContractById = async (req, res) => {
   const { profile } = req;
 
   try {
-    // Find the contract and ensure it belongs to the profile making the request
     const contract = await Contract.findOne({
       where: { id, ClientId: profile.id },
     });

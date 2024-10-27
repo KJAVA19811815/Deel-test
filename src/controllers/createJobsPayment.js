@@ -12,67 +12,42 @@ const createJobsPayment = async (req, res) => {
 
   try {
     await sequelize.transaction(async (transaction) => {
-      // Find unpaid job associated with an active contract owned by the client
       const job = await Job.findOne({
         where: { id: job_id, paid: false },
-        // include: [
-        //   {
-        //     model: Contract,
-        //     // where: {
-        //     //   ClientId: profile.id,
-        //     //   // status: { [Op.in]: ["new", "in_progress"] },
-        //     // },
-        //     include: [
-        //       {
-        //         model: Profile,
-        //         as: "Contractor",
-        //         attributes: ["id", "balance"],
-        //       },
-        //     ],
-        //   },
-        // ],
+        include: {
+          model: Contract,
+          where: {
+            ClientId: profile.id,
+            status: { [Op.in]: ["new", "in_progress"] },
+          },
+          include: { model: Profile, as: "Contractor" },
+        },
         transaction,
       });
 
-      console.log("Retrieved Job:", job);
-      // await sequelize.transaction(async (transaction) => {
-      //   const job = await Job.findOne({
-      //     where: { id: job_id, paid: false },
-      //     include: {
-      //       model: Contract,
-      //       where: {
-      //         ClientId: profile.id,
-      //         status: { [Op.in]: ["new", "in_progress"] },
-      //       },
-      //       include: { model: Profile, as: "Contractor" },
-      //     },
-      //     transaction,
-      //   });
-      //   console.log('HERE IS JOB', job)
+      if (!job) {
+        return res.status(404).json({ error: "Job not found or already paid" });
+      }
 
-      //   if (!job) {
-      //     return res.status(404).json({ error: "Job not found or already paid" });
-      //   }
+      const jobPrice = job.price;
+      const clientBalance = profile.balance;
 
-      //   const jobPrice = job.price;
-      //   const clientBalance = profile.balance;
+      if (clientBalance < jobPrice) {
+        return res
+          .status(400)
+          .json({ error: "Insufficient balance to pay for the job" });
+      }
 
-      //   if (clientBalance < jobPrice) {
-      //     return res
-      //       .status(400)
-      //       .json({ error: "Insufficient balance to pay for the job" });
-      //   }
+      profile.balance -= jobPrice;
+      await profile.save({ transaction });
 
-      //   profile.balance -= jobPrice;
-      //   await profile.save({ transaction });
+      const contractor = job.Contract.Contractor;
+      contractor.balance += jobPrice;
+      await contractor.save({ transaction });
 
-      //   const contractor = job.Contract.Contractor;
-      //   contractor.balance += jobPrice;
-      //   await contractor.save({ transaction });
-
-      //   job.paid = true;
-      //   job.paymentDate = new Date();
-      //   await job.save({ transaction });
+      job.paid = true;
+      job.paymentDate = new Date();
+      await job.save({ transaction });
 
       res.json({ message: "Job paid successfully" });
     });

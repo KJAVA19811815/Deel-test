@@ -16,7 +16,6 @@ const getContractById = async (req, res) => {
 
     res.json(contract);
   } catch (error) {
-    console.error("Error fetching contract:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

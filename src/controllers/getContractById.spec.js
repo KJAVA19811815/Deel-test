@@ -27,7 +27,6 @@ describe('getContractById', () => {
   });
 
   it('should return contract if it belongs to the client', async () => {
-    // Mock a contract that matches the client ID
     const mockContract = { id: 1, ClientId: 1, terms: 'Test terms', status: 'new' };
     Contract.findOne.mockResolvedValue(mockContract);
 
@@ -39,7 +38,6 @@ describe('getContractById', () => {
   });
 
   it('should return 404 if contract does not belong to the client', async () => {
-    // Simulate no contract found for the client
     Contract.findOne.mockResolvedValue(null);
 
     await getContractById(req, res);
@@ -50,7 +48,6 @@ describe('getContractById', () => {
   });
 
   it('should return 500 if there is a server error', async () => {
-    // Simulate an error during Contract.findOne
     Contract.findOne.mockRejectedValue(new Error('Database error'));
 
     await getContractById(req, res);

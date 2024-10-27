@@ -1,6 +1,3 @@
-// controllers/contractController.js
-
-// The handler function for the GET /contracts/:id route
 const getContractById = async (req, res) => {
   const { Contract } = req.app.get("models");
   const { id } = req.params;

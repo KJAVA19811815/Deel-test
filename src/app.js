@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const { sequelize } = require("./model");
 const { getProfile } = require("./middleware/getProfile");
 const { getContractById } = require("./controllers/getContractById");
+const { getContracts } = require("./controllers/getContracts");
 const app = express();
 app.use(bodyParser.json());
 app.set("sequelize", sequelize);
@@ -11,27 +12,7 @@ const { Op } = require("sequelize");
 
 app.get("/contracts/:id", getProfile, getContractById);
 
-app.get("/contracts", getProfile, async (req, res) => {
-  const { Contract } = req.app.get("models");
-  const { profile } = req;
-
-  try {
-    // Find contracts where the user is either the client or contractor and status is not 'terminated'
-    const contracts = await Contract.findAll({
-      where: {
-        status: {
-          [Op.ne]: "terminated", // Exclude terminated contracts
-        }, // Exclude terminated contracts
-        [Op.or]: [{ ClientId: profile.id }, { ContractorId: profile.id }],
-      },
-    });
-
-    res.json(contracts);
-  } catch (error) {
-    console.error("Error fetching contracts:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
+app.get("/contracts", getProfile, getContracts);
 
 app.get("/jobs/unpaid", getProfile, async (req, res) => {
   const { Job, Contract } = req.app.get("models");

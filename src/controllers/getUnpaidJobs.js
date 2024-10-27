@@ -23,7 +23,6 @@ const getUnpaidJobs = async (req, res) => {
 
     res.json(unpaidJobs);
   } catch (error) {
-    console.error("Error fetching unpaid jobs:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

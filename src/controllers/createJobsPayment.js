@@ -12,47 +12,71 @@ const createJobsPayment = async (req, res) => {
 
   try {
     await sequelize.transaction(async (transaction) => {
+      // Find unpaid job associated with an active contract owned by the client
       const job = await Job.findOne({
         where: { id: job_id, paid: false },
-        include: {
-          model: Contract,
-          where: {
-            ClientId: profile.id,
-            status: { [Op.in]: ["new", "in_progress"] },
-          },
-          include: { model: Profile, as: "Contractor" },
-        },
+        // include: [
+        //   {
+        //     model: Contract,
+        //     // where: {
+        //     //   ClientId: profile.id,
+        //     //   // status: { [Op.in]: ["new", "in_progress"] },
+        //     // },
+        //     include: [
+        //       {
+        //         model: Profile,
+        //         as: "Contractor",
+        //         attributes: ["id", "balance"],
+        //       },
+        //     ],
+        //   },
+        // ],
         transaction,
       });
 
-      if (!job) {
-        return res.status(404).json({ error: "Job not found or already paid" });
-      }
+      console.log("Retrieved Job:", job);
+      // await sequelize.transaction(async (transaction) => {
+      //   const job = await Job.findOne({
+      //     where: { id: job_id, paid: false },
+      //     include: {
+      //       model: Contract,
+      //       where: {
+      //         ClientId: profile.id,
+      //         status: { [Op.in]: ["new", "in_progress"] },
+      //       },
+      //       include: { model: Profile, as: "Contractor" },
+      //     },
+      //     transaction,
+      //   });
+      //   console.log('HERE IS JOB', job)
 
-      const jobPrice = job.price;
-      const clientBalance = profile.balance;
+      //   if (!job) {
+      //     return res.status(404).json({ error: "Job not found or already paid" });
+      //   }
 
-      if (clientBalance < jobPrice) {
-        return res
-          .status(400)
-          .json({ error: "Insufficient balance to pay for the job" });
-      }
+      //   const jobPrice = job.price;
+      //   const clientBalance = profile.balance;
 
-      profile.balance -= jobPrice;
-      await profile.save({ transaction });
+      //   if (clientBalance < jobPrice) {
+      //     return res
+      //       .status(400)
+      //       .json({ error: "Insufficient balance to pay for the job" });
+      //   }
 
-      const contractor = job.Contract.Contractor;
-      contractor.balance += jobPrice;
-      await contractor.save({ transaction });
+      //   profile.balance -= jobPrice;
+      //   await profile.save({ transaction });
 
-      job.paid = true;
-      job.paymentDate = new Date();
-      await job.save({ transaction });
+      //   const contractor = job.Contract.Contractor;
+      //   contractor.balance += jobPrice;
+      //   await contractor.save({ transaction });
+
+      //   job.paid = true;
+      //   job.paymentDate = new Date();
+      //   await job.save({ transaction });
 
       res.json({ message: "Job paid successfully" });
     });
   } catch (error) {
-    console.error("Error processing payment:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

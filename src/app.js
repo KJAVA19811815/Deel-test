@@ -32,4 +32,55 @@ app.get("/contracts/:id", getProfile, async (req, res) => {
   }
 });
 
+app.get("/contracts", getProfile, async (req, res) => {
+  const { Contract } = req.app.get("models");
+  const { profile } = req;
+
+  try {
+    // Find contracts where the user is either the client or contractor and status is not 'terminated'
+    const contracts = await Contract.findAll({
+      where: {
+        status: {
+          [Op.ne]: "terminated", // Exclude terminated contracts
+        }, // Exclude terminated contracts
+        [Op.or]: [{ ClientId: profile.id }, { ContractorId: profile.id }],
+      },
+    });
+
+    res.json(contracts);
+  } catch (error) {
+    console.error("Error fetching contracts:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/jobs/unpaid", getProfile, async (req, res) => {
+  const { Job, Contract } = req.app.get("models");
+  const { profile } = req;
+
+  try {
+    // Find all unpaid jobs for active contracts belonging to the calling user
+    const unpaidJobs = await Job.findAll({
+      where: {
+        paid: false, // Only unpaid jobs
+      },
+      include: [
+        {
+          model: Contract,
+          required: true, // Ensures only jobs with contracts are included
+          where: {
+            status: { [Op.in]: ["new", "in_progress"] }, // Only active contracts
+            [Op.or]: [{ ClientId: profile.id }, { ContractorId: profile.id }],
+          },
+        },
+      ],
+    });
+
+    res.json(unpaidJobs);
+  } catch (error) {
+    console.error("Error fetching unpaid jobs:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 module.exports = app;

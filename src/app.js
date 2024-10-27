@@ -205,4 +205,112 @@ app.post("/balances/deposit/:userId", getProfile, async (req, res) => {
   }
 });
 
+app.get("/admin/best-profession", async (req, res) => {
+  const { Job, Profile, Contract } = req.app.get("models");
+  const { start, end } = req.query;
+
+  // Validate date range
+  if (!start || !end) {
+    return res.status(400).json({ error: "Start and end dates are required" });
+  }
+
+  try {
+    // Find total earnings by profession within the given date range
+    const results = await Job.findAll({
+      attributes: [
+        [sequelize.col("Contract.Contractor.profession"), "profession"],
+        [sequelize.fn("SUM", sequelize.col("price")), "totalEarnings"],
+      ],
+      where: {
+        paid: true,
+        paymentDate: {
+          [Op.between]: [new Date(start), new Date(end)],
+        },
+      },
+      include: [
+        {
+          model: Contract,
+          include: [
+            { model: Profile, as: "Contractor", attributes: ["profession"] },
+          ],
+        },
+      ],
+      group: ["Contract.Contractor.profession"],
+      order: [[sequelize.fn("SUM", sequelize.col("price")), "DESC"]],
+      limit: 1, // Only get the top profession by earnings
+    });
+
+    if (results.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No jobs found in the specified date range" });
+    }
+
+    const bestProfession = results[0].dataValues;
+
+    res.json({
+      profession: bestProfession.profession,
+      totalEarnings: bestProfession.totalEarnings,
+    });
+  } catch (error) {
+    console.error("Error fetching best profession:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/admin/best-clients", async (req, res) => {
+  const { Job, Profile, Contract } = req.app.get("models");
+  const { start, end, limit = 2 } = req.query;
+
+  // Validate date range
+  if (!start || !end) {
+    return res.status(400).json({ error: "Start and end dates are required" });
+  }
+
+  try {
+    // Find total payments by client within the given date range
+    const results = await Job.findAll({
+      attributes: [
+        [sequelize.col("Contract.Client.id"), "clientId"],
+        [sequelize.col("Contract.Client.firstName"), "firstName"],
+        [sequelize.col("Contract.Client.lastName"), "lastName"],
+        [sequelize.fn("SUM", sequelize.col("price")), "totalPaid"],
+      ],
+      where: {
+        paid: true,
+        paymentDate: {
+          [Op.between]: [new Date(start), new Date(end)],
+        },
+      },
+      include: [
+        {
+          model: Contract,
+          include: [{ model: Profile, as: "Client", attributes: [] }], // Join with client but exclude extra fields
+        },
+      ],
+      group: ["Contract.Client.id"],
+      order: [[sequelize.fn("SUM", sequelize.col("price")), "DESC"]],
+      limit: parseInt(limit, 10), // Apply the limit from the query parameter or default to 2
+    });
+
+    if (results.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No clients found in the specified date range" });
+    }
+
+    // Format response to include only relevant fields
+    const bestClients = results.map((client) => ({
+      id: client.dataValues.clientId,
+      fullName: `${client.dataValues.firstName} ${client.dataValues.lastName}`,
+      totalPaid: client.dataValues.totalPaid,
+    }));
+
+    res.json(bestClients);
+  } catch (error) {
+    console.error("Error fetching best clients:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 module.exports = app;
